@@ -1,16 +1,52 @@
+'use strict';
+
 module.exports = function(pattern) {
-   return function decorator(target) {
-      target.senecaService = function(excludedMethods) {
-        var excludedMethods = excludedMethods || [];
-        excludedMethods.push('constructor');
-        var methodNames = Object.getOwnPropertyNames(target.prototype);
-        var serviceMethods = methodNames.filter(function(method){
-          return excludedMethods.indexOf(method) === -1;
-        });
-        serviceMethods.forEach(function(methodName) {
-          var method = target.prototype[methodName];
-          console.log(method);
+  return function decorator(target) {
+    target.senecaService = function() {
+      var args = [].slice.call(arguments);
+      var instance = construct(target, args);
+
+      return function(options) {
+        var seneca = this;
+        var serviceMethods = getServiceMethods(target);
+        serviceMethods.forEach(function(method) {
+          var actionPattern = JSON.parse(JSON.stringify(pattern));
+          actionPattern['action'] =  method.name;
+          seneca.add(actionPattern, function(args, callback) {
+            var instanceMethod = args.args ? method.bind(instance, args.args): method.bind(instance);
+            if(method.length>1) {
+              instanceMethod(function(err, value) {
+                if(err)
+                  callback(err);
+                else
+                  callback(null, {data: value});
+              })
+            } else {
+              instanceMethod();
+              callback(null, {data: "OK"});
+            }
+          });
         })
+        return {name: target.name};
       }
-   }
+    }
+  }
+}
+
+function getServiceMethods(target) {
+  var excludedMethods = [];
+  excludedMethods.push('constructor');
+  var methodNames = Object.getOwnPropertyNames(target.prototype);
+  var serviceMethodNames = methodNames.filter(function(method) {
+    return excludedMethods.indexOf(method) === -1;
+  });
+  return serviceMethodNames.map(function(methodName) {
+    return target.prototype[methodName];
+  })
+}
+
+function construct(constr, args) {
+  var instance = Object.create(constr.prototype);
+  var result = constr.apply(instance, args);
+  return typeof result === 'object' ? result : instance;
 }
