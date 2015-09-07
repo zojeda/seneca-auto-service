@@ -9,6 +9,10 @@ var mocha = require('gulp-mocha');
 var istanbul = require('gulp-istanbul');
 var plumber = require('gulp-plumber');
 
+// Initialize the babel transpiler so ES2015 files gets compiled
+// when they're loaded
+require('babel-core/register')({ optional: ["es7.decorators"] });
+
 var src = [ 'src/**/*.js' ];
 var srcOption = { base: './' };
 var dest = './dist';
@@ -31,10 +35,13 @@ gulp.task('babel', ['clean'], function () {
 
 gulp.task('pre-test', function () {
   return gulp.src('src/**/*.js')
+    .pipe(ignore.exclude('*.spec.js'))
     .pipe(babel({ optional: ["es7.decorators"] }))
-    .pipe(istanbul({includeUntested: false}))
+    .pipe(sourcemaps.write('.', { includeContent: false, sourceRoot: '..' }))
+    .pipe(istanbul({includeUntested: true}))
     .pipe(istanbul.hookRequire());
 });
+
 
 gulp.task('test', ['pre-test'], function (cb) {
   var mochaErr;
@@ -47,7 +54,7 @@ gulp.task('test', ['pre-test'], function (cb) {
     .pipe(mocha({
       reporter: 'spec',
       require: {
-        chai: chai
+        chai: chai,
       },
       globals: {
         chai: chai,
@@ -57,14 +64,11 @@ gulp.task('test', ['pre-test'], function (cb) {
     }))
     .on('error', function (err) {
       mochaErr = err;
-      //console.error(err);
+      console.error(err);
     })
     .pipe(istanbul.writeReports())
+    .pipe(istanbul.enforceThresholds({ thresholds: { global: 100 } }))
     .on('end', function () {
       cb(mochaErr);
     });
 });
-
-gulp.task('watch-mocha', function() {
-    gulp.watch(['src/**'], ['test']);
-})

@@ -2,6 +2,22 @@
 
 module.exports = function(pattern) {
   return function decorator(target) {
+    target.client = function(seneca) {
+      var client = {};
+      var serviceMethods = getServiceMethods(target);
+      serviceMethods.forEach(function(method) {
+        var actionPattern = JSON.parse(JSON.stringify(pattern));
+        actionPattern.action = method.name;
+        client[method.name] = function(args, cb){
+          if(method.length>0 && cb)
+            actionPattern.args = args;
+          else
+            cb = args
+          seneca.act(actionPattern, cb);
+        }
+      });
+      return client;
+    };
     target.senecaService = function() {
       var args = [].slice.call(arguments);
       var instance = construct(target, args);
@@ -11,14 +27,14 @@ module.exports = function(pattern) {
         var serviceMethods = getServiceMethods(target);
         serviceMethods.forEach(function(method) {
           var actionPattern = JSON.parse(JSON.stringify(pattern));
-          actionPattern['action'] =  method.name;
+          actionPattern.action = method.name;
           seneca.add(actionPattern, function(args, callback) {
             var instanceMethod = args.args ? method.bind(instance, args.args): method.bind(instance);
             if(method.length>1) {
               instanceMethod(function(err, value) {
-                if(err)
+                if(err) {
                   callback(err);
-                else
+                } else
                   callback(null, {data: value});
               })
             } else {
