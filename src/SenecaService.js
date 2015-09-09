@@ -9,10 +9,12 @@ module.exports = function(pattern) {
         var actionPattern = JSON.parse(JSON.stringify(pattern));
         actionPattern.action = method.name;
         client[method.name] = function(args, cb){
-          if(method.length>0 && cb)
+          if(!cb) {
+            cb=args;
+            args = undefined;
+          }
+          if(args)
             actionPattern.args = args;
-          else
-            cb = args
           seneca.act(actionPattern, cb);
         }
       });
@@ -30,7 +32,7 @@ module.exports = function(pattern) {
           actionPattern.action = method.name;
           seneca.add(actionPattern, function(args, callback) {
             var instanceMethod = args.args ? method.bind(instance, args.args): method.bind(instance);
-            if(method.length>1) {
+            if(method.length>0) {
               instanceMethod(function(err, value) {
                 if(err) {
                   callback(err);

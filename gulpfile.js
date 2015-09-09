@@ -64,7 +64,7 @@ gulp.task('test', ['pre-test'], function (cb) {
     }))
     .on('error', function (err) {
       mochaErr = err;
-      console.error(err);
+      //console.error(err);
     })
     .pipe(istanbul.writeReports())
     .pipe(istanbul.enforceThresholds({ thresholds: { global: 100 } }))

@@ -20,8 +20,9 @@ class AClassWithColaborators {
   withNoArgs() {
     this.colaborator2.log2('withNoArgs');
   }
-  withOneArg(someArg) {
-    this.colaborator2.log2(someArg);
+  withCallback(cb) {
+    this.colaborator2.log2('withCallback');
+    cb(null, 'withCallback');
   }
   withOneArgAndCallback(someArg, callback) {
     this.colaborator2.log2('withOneArgAndCallback');
@@ -67,7 +68,7 @@ describe('Seneca Service Decorator', () => {
         seneca.ready(()=>done());
       });
       afterEach( () => {
-        //console.error(senecaError);
+//        if (senecaError ) console.log(senecaError);
       });
       it('Should respond on seneca act invocations withOneArgAndCallback (arg, callback)', (done) => {
         seneca.act('role:some.api,action:withOneArgAndCallback,args:anyArg', (err, result) => {
@@ -89,9 +90,10 @@ describe('Seneca Service Decorator', () => {
           done();
         })
       });
-      it('Should respond on seneca act invocations withOneArg (arg)', (done) => {
-        seneca.act('role:some.api,action:withOneArg,args:anyArg', (err, result) => {
-          c2.log2.should.have.been.calledWith("anyArg");
+      it('Should respond on seneca act invocations withCallback(cb)', (done) => {
+        seneca.act('role:some.api,action:withCallback', (err, result) => {
+          c2.log2.should.have.been.calledWith("withCallback");
+          result.data.should.be.equal('withCallback');
           done();
         })
       });
@@ -106,14 +108,14 @@ describe('Seneca Service Decorator', () => {
         seneca.use(AClassWithColaborators.senecaService(c1, c2));
         client = AClassWithColaborators.client(seneca);
         seneca.ready(done);
-
       });
       afterEach( () => {
-        // console.error(senecaError);
+         //console.log(senecaError);
       });
-      it('Should respond on seneca invocations withOneArg (arg)', (done) => {
-        client.withOneArg('anyArg', () => {
-          c2.log2.should.have.been.calledWith("anyArg");
+      it('Should respond on seneca invocations withCallback(cb)', (done) => {
+        client.withCallback((err, result) => {
+          c2.log2.should.have.been.calledWith("withCallback");
+          result.data.should.be.equal('withCallback');
           done();
         });
       });
